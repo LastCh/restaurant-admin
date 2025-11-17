@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { AuthResponse, ErrorResponse } from '../types';
+import type { ErrorResponse } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -21,10 +21,12 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ErrorResponse>) => {
-    if (error.response?.status === 401) {
+    // ТОЛЬКО перенаправляем при 401 (истёк токен), НЕ при других ошибках
+    if (error.response?.status === 401 && error.config?.url?.includes('/admin/')) {
       localStorage.clear();
       window.location.href = '/login';
     }
+    // Для всех остальных ошибок просто возвращаем ошибку
     return Promise.reject(error);
   }
 );
