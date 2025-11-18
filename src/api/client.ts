@@ -21,14 +21,14 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ErrorResponse>) => {
-    // ТОЛЬКО перенаправляем при 401 (истёк токен), НЕ при других ошибках
-    if (error.response?.status === 401 && error.config?.url?.includes('/admin/')) {
-      localStorage.clear();
-      window.location.href = '/login';
-    }
-    // Для всех остальных ошибок просто возвращаем ошибку
+    // УБРАЛИ перенаправление вообще для тестирования
+    // if (error.response?.status === 401 && error.config?.url?.includes('/admin/')) {
+    //   localStorage.clear();
+    //   window.location.href = '/login';
+    // }
     return Promise.reject(error);
   }
 );
+
 
 export default apiClient;

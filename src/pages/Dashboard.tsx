@@ -1,80 +1,69 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Spin, Alert } from 'antd';
+import { Card, Row, Col, Statistic, Spin } from 'antd';
 import { 
   ShoppingCartOutlined, 
   DollarOutlined, 
   CalendarOutlined,
   UserOutlined,
   WarningOutlined,
-  LogoutOutlined 
+  LockOutlined,
 } from '@ant-design/icons';
 import { statisticsAPI, type DashboardStats } from '../api/statistics';
 import { useAuthStore } from '../store/authStore';
-import { authAPI } from '../api/auth';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
+      fetchStats();
+    } else {
+      setLoading(false);
+      setStats(null);
+    }
+  }, [user?.role]);
 
   const fetchStats = async () => {
     try {
       setLoading(true);
       const data = await statisticsAPI.getDashboard();
       setStats(data);
-      setError(null);
     } catch (err) {
-      setError('Ошибка при загрузке статистики');
-      console.error(err);
+      console.error('Failed to load statistics:', err);
+      setStats(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    await authAPI.logout();
-    logout();
-    navigate('/login');
+  const getRoleLabel = (role: string) => {
+    const labels = {
+      ADMIN: 'Администратор',
+      MANAGER: 'Менеджер',
+      WAITER: 'Официант',
+    };
+    return labels[role as keyof typeof labels] || role;
   };
 
   if (loading) {
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
         <Spin size="large" fullscreen />
-        </div>
+      </div>
     );
-    }
+  }
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* Заголовок с выходом */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1>Добро пожаловать, {user?.username}! 👋</h1>
-          <p style={{ color: '#999' }}>Панель управления рестораном</p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <h1>Добро пожаловать, {user?.username}!</h1>
+        <p style={{ color: '#999' }}>Роль: {getRoleLabel(user?.role || '')}</p>
       </div>
 
-      {/* Ошибка */}
-      {error && (
-        <Alert 
-          type="error" 
-          message={error}
-          showIcon
-          closable
-          style={{ marginBottom: 16 }}
-        />
-      )}
-
-      {/* Статистика */}
-      {stats && (
+      {/* Статистика для ADMIN и MANAGER */}
+      {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && stats && (
         <>
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} lg={6}>
@@ -121,7 +110,6 @@ export default function Dashboard() {
             </Col>
           </Row>
 
-          {/* Предупреждения */}
           <Row gutter={[16, 16]}>
             {stats.lowStockItems > 0 && (
               <Col xs={24} sm={12}>
@@ -151,6 +139,25 @@ export default function Dashboard() {
         </>
       )}
 
+      {/* Для WAITER — одно сообщение с инструкцией */}
+      {user?.role === 'WAITER' && (
+        <Card>
+          <Row gutter={16} align="middle">
+            <Col flex="auto">
+              <h3 style={{ margin: '0 0 12px 0' }}>Ваши возможности:</h3>
+              <p style={{ margin: '0 0 8px 0', color: '#262626' }}>
+                ✓ Просмотр и управление заказами
+              </p>
+              <p style={{ margin: 0, color: '#8c8c8c', fontSize: 12 }}>
+                Перейдите в раздел <strong>"Заказы"</strong> в левом меню для работы с заказами клиентов.
+              </p>
+            </Col>
+            <Col>
+              <LockOutlined style={{ fontSize: 32, color: '#bfbfbf' }} />
+            </Col>
+          </Row>
+        </Card>
+      )}
     </div>
   );
 }

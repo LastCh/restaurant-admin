@@ -3,7 +3,7 @@ export type AuthResponse = {
   refreshToken: string;
   userId: number;
   username: string;
-  role: string;
+  role: 'ADMIN' | 'MANAGER' | 'WAITER';
   expiresIn: number;
 };
 

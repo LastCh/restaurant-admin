@@ -16,36 +16,40 @@ export default function Login() {
   const [form] = Form.useForm();
 
   const handleLogin = async (values: { username: string; password: string }) => {
-    setLoading(true);
+  setLoading(true);
+  console.log('🔍 Attempting login with:', values.username); // ← ДОБАВЬТЕ
+  
+  try {
+    const user = await authAPI.login(values);
+    console.log('✅ Login response:', user); // ← ДОБАВЬТЕ
+    setUser(user);
+    form.resetFields();
+    navigate('/dashboard');
+  } catch (e) {
+    const err = e as AxiosError<ErrorResponse>;
+    console.error('❌ Login error:', err.response?.status, err.response?.data); // ← ДОБАВЬТЕ
     
-    try {
-      const user = await authAPI.login(values);
-      setUser(user);
-      form.resetFields();
-      navigate('/dashboard');
-    } catch (e) {
-      const err = e as AxiosError<ErrorResponse>;
-      let errorMsg = 'Неверные учетные данные';
-      
-      if (err.response?.status === 429) {
-        errorMsg = 'Слишком много попыток входа. Попробуйте позже.';
-      } else if (err.response?.data?.message) {
-        errorMsg = err.response.data.message;
-      } else if (err.message === 'Network Error') {
-        errorMsg = 'Ошибка подключения к серверу';
-      }
-      
-      // ТОЛЬКО устанавливаем ошибку на поле (одно уведомление)
-      form.setFields([
-        {
-          name: 'password',
-          errors: [errorMsg],
-        },
-      ]);
-    } finally {
-      setLoading(false);
+    let errorMsg = 'Неверные учетные данные';
+    
+    if (err.response?.status === 429) {
+      errorMsg = 'Слишком много попыток входа. Попробуйте позже.';
+    } else if (err.response?.data?.message) {
+      errorMsg = err.response.data.message;
+    } else if (err.message === 'Network Error') {
+      errorMsg = 'Ошибка подключения к серверу';
     }
-  };
+    
+    form.setFields([
+      {
+        name: 'password',
+        errors: [errorMsg],
+      },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div style={{ 

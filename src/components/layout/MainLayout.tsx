@@ -28,32 +28,56 @@ export default function MainLayout({ children }: MainLayoutProps) {
     navigate('/login');
   };
 
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-      onClick: () => navigate('/dashboard'),
-    },
-    {
-      key: '/orders',
-      icon: <ShoppingCartOutlined />,
-      label: 'Заказы',
-      onClick: () => navigate('/orders'),
-    },
-    {
-      key: '/menu',
-      icon: <AppstoreOutlined />,
-      label: 'Меню',
-      onClick: () => navigate('/menu'),
-    },
-    {
-      key: '/reservations',
-      icon: <CalendarOutlined />,
-      label: 'Бронирования',
-      onClick: () => navigate('/reservations'),
-    },
-  ];
+  // Меню в зависимости от роли
+  const getMenuItems = () => {
+    const baseItems = [
+      {
+        key: '/dashboard',
+        icon: <DashboardOutlined />,
+        label: 'Dashboard',
+        onClick: () => navigate('/dashboard'),
+      },
+    ];
+
+    const managerItems = [
+      {
+        key: '/orders',
+        icon: <ShoppingCartOutlined />,
+        label: 'Заказы',
+        onClick: () => navigate('/orders'),
+      },
+      {
+        key: '/menu',
+        icon: <AppstoreOutlined />,
+        label: 'Меню',
+        onClick: () => navigate('/menu'),
+      },
+      {
+        key: '/reservations',
+        icon: <CalendarOutlined />,
+        label: 'Бронирования',
+        onClick: () => navigate('/reservations'),
+      },
+    ];
+
+    const waiterItems = [
+      {
+        key: '/orders',
+        icon: <ShoppingCartOutlined />,
+        label: 'Заказы',
+        onClick: () => navigate('/orders'),
+      },
+    ];
+
+    if (user?.role === 'ADMIN') {
+      return [...baseItems, ...managerItems];
+    } else if (user?.role === 'MANAGER') {
+      return [...baseItems, ...managerItems];
+    } else if (user?.role === 'WAITER') {
+      return [...baseItems, ...waiterItems];
+    }
+    return baseItems;
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -78,7 +102,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          items={menuItems}
+          items={getMenuItems()}
         />
       </Sider>
 
