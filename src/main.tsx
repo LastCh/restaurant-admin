@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { ConfigProvider } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import ruRU from 'antd/locale/ru_RU'
 import './index.css'
 
 // Убираем стандартный padding/margin
@@ -26,7 +26,7 @@ document.head.appendChild(style);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={ruRU}>
       <App />
     </ConfigProvider>
   </React.StrictMode>,

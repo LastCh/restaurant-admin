@@ -177,6 +177,7 @@ export default function Orders() {
             onChange: (page, pageSize) => fetchOrders(page - 1, pageSize),
           }}
           bordered
+          locale={{ emptyText: 'Здесь пока пусто' }}
         />
       </Spin>
 
