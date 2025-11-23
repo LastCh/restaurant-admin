@@ -1,11 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import { ConfigProvider } from 'antd'
-import ruRU from 'antd/locale/ru_RU'
 import './index.css'
 
-// Убираем стандартный padding/margin
 const style = document.createElement('style');
 style.textContent = `
   * {

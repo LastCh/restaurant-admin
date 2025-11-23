@@ -1,15 +1,21 @@
-import { Layout, Menu, Button, Avatar, Space } from 'antd';
+import { Layout, Menu, Button, Avatar, Space, Select } from 'antd';
 import { 
   DashboardOutlined, 
   ShoppingCartOutlined, 
   AppstoreOutlined, 
   CalendarOutlined,
   LogoutOutlined,
-  UserOutlined
+  UserOutlined,
+  CoffeeOutlined,
+  ExperimentOutlined,
+  ShopOutlined,
+  TruckOutlined,
+  DollarOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { authAPI } from '../../api/auth';
+import { useLocale, useT } from '../../i18n';
 
 const { Sider, Content, Header } = Layout;
 
@@ -29,12 +35,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
   };
 
   // Меню в зависимости от роли
+  const t = useT();
+  const { locale, setLocale } = useLocale();
+
   const getMenuItems = () => {
     const baseItems = [
       {
         key: '/dashboard',
         icon: <DashboardOutlined />,
-        label: 'Dashboard',
+        label: t('menu.dashboard'),
         onClick: () => navigate('/dashboard'),
       },
     ];
@@ -43,20 +52,44 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {
         key: '/orders',
         icon: <ShoppingCartOutlined />,
-        label: 'Заказы',
+        label: t('menu.orders'),
         onClick: () => navigate('/orders'),
       },
       {
         key: '/menu',
-        icon: <AppstoreOutlined />,
-        label: 'Меню',
+        icon: <CoffeeOutlined />,
+        label: t('menu.menu'),
         onClick: () => navigate('/menu'),
       },
       {
         key: '/reservations',
         icon: <CalendarOutlined />,
-        label: 'Бронирования',
+        label: t('menu.reservations'),
         onClick: () => navigate('/reservations'),
+      },
+      {
+        key: '/ingredients',
+        icon: <ExperimentOutlined />,
+        label: t('menu.ingredients'),
+        onClick: () => navigate('/ingredients'),
+      },
+      {
+        key: '/suppliers',
+        icon: <ShopOutlined />,
+        label: t('menu.suppliers'),
+        onClick: () => navigate('/suppliers'),
+      },
+      {
+        key: '/supplies',
+        icon: <TruckOutlined />,
+        label: t('menu.supplies'),
+        onClick: () => navigate('/supplies'),
+      },
+      {
+        key: '/sales',
+        icon: <DollarOutlined />,
+        label: t('menu.sales'),
+        onClick: () => navigate('/sales'),
       },
     ];
 
@@ -109,23 +142,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <Layout>
         <Header style={{ 
           background: '#fff', 
-          padding: '0 24px',
+          padding: '0 20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
         }}>
-          <h2 style={{ margin: 0 }}>Админ-панель</h2>
+          <h2 style={{ margin: 0 }}>{t('title')}</h2>
           <Space>
+            <Select value={locale} onChange={(val) => setLocale(val as 'ru' | 'en')} style={{ width: 90 }} options={[{ value: 'ru', label: 'RU' }, { value: 'en', label: 'EN' }]} />
             <Avatar icon={<UserOutlined />} />
-            <span>{user?.username}</span>
+            <span style={{ marginRight: 8 }}>{user?.username}</span>
             <Button 
               type="primary" 
               danger 
               icon={<LogoutOutlined />}
               onClick={handleLogout}
             >
-              Выход
+              {t('logout')}
             </Button>
           </Space>
         </Header>

@@ -11,9 +11,32 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #f6f7fb;
+  color: #1f2937;
+}
+
+.ant-layout-header {
+  background: linear-gradient(90deg, #0b74de 0%, #6fb1ff 100%);
+  color: #fff;
+}
+
+.ant-layout-sider {
+  background: #001529;
+}
+
+.ant-card {
+  border-radius: 8px;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa;
+}
+
+.app-content {
+  padding: 24px;
 }

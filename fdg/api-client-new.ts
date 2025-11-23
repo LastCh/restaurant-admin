@@ -1,5 +1,6 @@
-import axios from 'axios';
-import type { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
+# api/client.ts - НОВЫЙ (с интерцепторами)
+
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
@@ -55,22 +56,6 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
-    const requestUrl: string | undefined = originalRequest?.url;
-
-    // Для auth-эндпоинтов (signin/signup/refresh/validate) просто пробрасываем 401,
-    // чтобы страница логина могла сама показать ошибку, без принудительного редиректа.
-    if (
-      error.response?.status === 401 &&
-      requestUrl &&
-      (
-        requestUrl.includes('/auth/signin') ||
-        requestUrl.includes('/auth/signup') ||
-        requestUrl.includes('/auth/refresh') ||
-        requestUrl.includes('/auth/validate')
-      )
-    ) {
-      return Promise.reject(error);
-    }
 
     // Если 401 и это не уже попытка обновления
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -106,16 +91,14 @@ apiClient.interceptors.response.use(
         localStorage.setItem('accessToken', accessToken);
 
         apiClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        }
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);
         return apiClient(originalRequest);
       } catch (err) {
         processQueue(err, null);
 
-        // Логаутим и перенаправляем на логин
+        // Логируемся заново
         const authStore = useAuthStore.getState();
         authStore.logout();
         window.location.href = '/login';

@@ -1,11 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Spin } from 'antd';
+import { Spin, ConfigProvider } from 'antd';
+import ruRU from 'antd/locale/ru_RU';
+import enUS from 'antd/locale/en_US';
+import { LocaleContext, useLocale } from './i18n';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Menu from './pages/Menu';
 import Reservations from './pages/Reservations';
+import Ingredients from './pages/Ingredients';
+import Suppliers from './pages/Suppliers';
+import Supplies from './pages/Supplies';
+import Sales from './pages/Sales';
 import MainLayout from './components/layout/MainLayout';
 import { useAuthStore } from './store/authStore';
 
@@ -27,11 +34,16 @@ function PrivateRoute({ children, allowedRoles }: { children: React.ReactNode; a
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const restoreSession = useAuthStore((state) => state.restoreSession);
+  const [locale, setLocale] = useState<'ru' | 'en'>(() => (localStorage.getItem('locale') as 'ru' | 'en') || 'ru');
 
   useEffect(() => {
     restoreSession();
     setIsInitialized(true);
   }, [restoreSession]);
+
+  useEffect(() => {
+    localStorage.setItem('locale', locale);
+  }, [locale]);
 
   if (!isInitialized) {
     return (
@@ -42,14 +54,16 @@ export default function App() {
         minHeight: '100vh',
         background: '#f0f2f5'
       }}>
-        <Spin size="large" tip="Загрузка..." />
+        <Spin size="large" tip={locale === 'ru' ? 'Загрузка...' : 'Loading...'} />
       </div>
     );
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <LocaleContext.Provider value={{ locale, setLocale }}>
+      <ConfigProvider locale={locale === 'ru' ? ruRU : enUS} componentSize="middle">
+        <BrowserRouter>
+          <Routes>
         <Route path="/login" element={<Login />} />
         <Route 
           path="/dashboard" 
@@ -83,8 +97,42 @@ export default function App() {
             </PrivateRoute>
           } 
         />
+        <Route
+          path="/ingredients"
+          element={
+            <PrivateRoute allowedRoles={['ADMIN', 'MANAGER']}>
+              <Ingredients />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/suppliers"
+          element={
+            <PrivateRoute allowedRoles={['ADMIN', 'MANAGER']}>
+              <Suppliers />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/supplies"
+          element={
+            <PrivateRoute allowedRoles={['ADMIN', 'MANAGER']}>
+              <Supplies />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/sales"
+          element={
+            <PrivateRoute allowedRoles={['ADMIN', 'MANAGER']}>
+              <Sales />
+            </PrivateRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </ConfigProvider>
+    </LocaleContext.Provider>
   );
 }
