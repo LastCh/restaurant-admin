@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+ARCHITECTURE_RECOMMENDATION.md
+AUTOMATIC_DEDUCTIONS.md
 dist
 dist-ssr
 *.local

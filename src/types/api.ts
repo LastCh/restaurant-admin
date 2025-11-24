@@ -118,6 +118,16 @@ export interface OrderDTO {
   updatedAt: string;
 }
 
+export interface DashboardStats {
+  todayOrders: number;
+  todayRevenue: number;
+  activeReservations: number;
+  totalClients: number;
+  lowStockItems: number;
+  pendingOrders: number;
+}
+
+
 export interface CreateOrderRequest {
   clientId?: number;
   reservationId?: number;
@@ -167,7 +177,7 @@ export interface CreateReservationRequest {
   reservationTime: string;
   durationMinutes?: number;
   partySize: number;
-  clientId: number;
+  clientId?: number;
   tableId?: number;
   notes?: string;
 }

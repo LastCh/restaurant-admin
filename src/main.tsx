@@ -23,8 +23,6 @@ document.head.appendChild(style);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider locale={ruRU}>
-      <App />
-    </ConfigProvider>
+    <App />
   </React.StrictMode>,
 )

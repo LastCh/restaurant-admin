@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Spin, ConfigProvider } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
 import enUS from 'antd/locale/en_US';
-import { LocaleContext, useLocale } from './i18n';
+import { LocaleContext } from './i18n';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';

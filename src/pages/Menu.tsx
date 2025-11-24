@@ -27,7 +27,7 @@ export default function Menu() {
   const fetchDishes = async (page = 0, size = 10, sortBy = 'createdAt', direction: 'asc' | 'desc' = 'desc') => {
     try {
       setLoading(true);
-      const response = await menuAPI.getAll(page, size);
+      const response = await menuAPI.getAll(page, size, sortBy, direction);
       setDishes(response.content || []);
       setPagination({
         current: page + 1,
@@ -208,7 +208,7 @@ export default function Menu() {
           pagination={{ ...pagination, onChange: (p, s) => fetchDishes(p - 1, s, sortConfig.field, sortConfig.direction) }}
           bordered
           locale={{ emptyText: 'Меню пусто' }}
-          onChange={(paginationConfig, filters, sorter) => {
+          onChange={(paginationConfig, _filters, sorter) => {
             if (sorter && 'field' in sorter && sorter.field) {
               const sortBy = sorter.field as string;
               const direction = sorter.order === 'ascend' ? 'asc' : 'desc';
@@ -240,7 +240,7 @@ export default function Menu() {
           </Form.Item>
           <Form.Item name="category" label="Категория" rules={[{ required: true, message: 'Выберите категорию' }]}>
             <Select placeholder="Выберите категорию" showSearch filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '').toLowerCase().includes(String(input).toLowerCase())
             }>
               {DISH_CATEGORIES.map((category) => (
                 <Select.Option key={category} value={category}>

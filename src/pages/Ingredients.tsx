@@ -20,6 +20,14 @@ export default function Ingredients() {
   const [form] = Form.useForm();
   const { user } = useAuthStore();
 
+  const [addStockFor, setAddStockFor] = useState<Ingredient | null>(null);
+  const [addStockQty, setAddStockQty] = useState<number>(0);
+
+  const openAddStockModal = (ingredient: Ingredient) => {
+    setAddStockFor(ingredient);
+    setAddStockQty(0);
+  };
+
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({
     field: 'createdAt',
     direction: 'desc',
@@ -145,7 +153,6 @@ export default function Ingredients() {
         return (
           <span style={{ color: isLow ? '#ff4d4f' : undefined, fontWeight: isLow ? 'bold' : undefined }}>
             {value} {formatUnit(record.unit)}
-            {isLow && ' ⚠️'}
           </span>
         );
       },
@@ -168,12 +175,15 @@ export default function Ingredients() {
     {
       title: 'Действия',
       key: 'actions',
-      width: 150,
+      width: 200,
       render: (_, record) =>
         (user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
           <Space size="small">
             <Button type="primary" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
               Изменить
+            </Button>
+            <Button size="small" onClick={() => openAddStockModal(record)}>
+              Пополнить
             </Button>
             {user?.role === 'ADMIN' && (
               <Button danger size="small" icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)}>
@@ -216,7 +226,7 @@ export default function Ingredients() {
           }}
           bordered
           locale={{ emptyText: <EmptyState message="Ингредиенты отсутствуют" /> }}
-          onChange={(paginationConfig, filters, sorter) => {
+          onChange={(paginationConfig, _filters, sorter) => {
             if (sorter && 'field' in sorter && sorter.field) {
               const sortBy = sorter.field as string;
               const direction = sorter.order === 'ascend' ? 'asc' : 'desc';
@@ -263,6 +273,37 @@ export default function Ingredients() {
             <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal to add stock */}
+      <Modal
+        title={addStockFor ? `Пополнить запас: ${addStockFor.name}` : 'Пополнить запас'}
+        open={!!addStockFor}
+        onOk={async () => {
+          try {
+            const q = Number(addStockQty) || 0;
+            if (q <= 0) {
+              message.error('Введите корректное количество');
+              return;
+            }
+            await ingredientsAPI.updateStock(addStockFor!.id, q);
+            message.success('Запас обновлён');
+            setAddStockFor(null);
+            setAddStockQty(0);
+            fetchIngredients(pagination.current - 1, pagination.pageSize, sortConfig.field, sortConfig.direction);
+          } catch (err: any) {
+            message.error(err?.response?.data?.message || err?.message || 'Ошибка при обновлении запаса');
+          }
+        }}
+        onCancel={() => {
+          setAddStockFor(null);
+          setAddStockQty(0);
+        }}
+      >
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <InputNumber min={0.01} step={0.01} style={{ width: 160 }} value={addStockQty} onChange={(v) => setAddStockQty(Number(v) || 0)} />
+          <span>{addStockFor ? formatUnit(addStockFor.unit) : ''}</span>
+        </div>
       </Modal>
     </div>
   );

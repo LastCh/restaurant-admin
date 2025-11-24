@@ -4,8 +4,8 @@ import type { DishDTO, CreateDishRequest } from '../types';
 export type Dish = DishDTO;
 
 export const menuAPI = {
-  getAll: async (page = 0, size = 10) => {
-    const { data } = await apiClient.get(`/dishes?page=${page}&size=${size}`);
+  getAll: async (page = 0, size = 10, sortBy = 'createdAt', direction: 'asc' | 'desc' = 'desc') => {
+    const { data } = await apiClient.get(`/dishes?page=${page}&size=${size}&sortBy=${sortBy}&direction=${direction}`);
     return data;
   },
 

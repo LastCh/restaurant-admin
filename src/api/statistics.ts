@@ -16,8 +16,11 @@ export const statisticsAPI = {
     );
     return data;
   },
+
   getSales: async (from: string, to: string): Promise<any> => {
-    const { data } = await apiClient.get(`/admin/statistics/sales?from=${from}&to=${to}`);
+    const { data } = await apiClient.get(
+      `/admin/statistics/sales?from=${from}&to=${to}`
+    );
     return data;
   },
 };

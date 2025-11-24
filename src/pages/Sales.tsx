@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, Spin, message } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, Spin, message } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { TableColumnsType } from 'antd';
 import { salesAPI, type Sale, type PaymentMethod, type CreateSaleRequest } from '../api/sales';
 import { ordersAPI, type Order } from '../api/orders';
@@ -21,10 +21,28 @@ export default function Sales() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const { user } = useAuthStore();
 
-  const fetchSales = async (page = 0, size = 10, sortBy = 'saleTime', direction: 'asc' | 'desc' = 'desc') => {
+  const [range, setRange] = useState<'all' | 'today' | 'month' | 'year'>('all');
+  const [currentRangeStart, setCurrentRangeStart] = useState<string | undefined>(undefined);
+  const [currentRangeEnd, setCurrentRangeEnd] = useState<string | undefined>(undefined);
+
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({
+    field: 'saleTime',
+    direction: 'desc',
+  });
+
+  const fetchSales = async (
+    page = 0,
+    size = 10,
+    sortBy = sortConfig.field,
+    direction: 'asc' | 'desc' = sortConfig.direction,
+    start?: string,
+    end?: string
+  ) => {
     try {
       setLoading(true);
-      const response = await salesAPI.getAll(page, size, sortBy, direction);
+      const response = start && end
+        ? await salesAPI.getBetweenDates(start, end, page, size)
+        : await salesAPI.getAll(page, size, sortBy, direction);
       setSales(response.content || []);
       setPagination({
         current: (response.currentPage ?? page) + 1,
@@ -40,50 +58,43 @@ export default function Sales() {
     }
   };
 
-  useEffect(() => {
-    fetchSales();
-    fetchOrders();
-  }, []);
-
-  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({
-    field: 'saleTime',
-    direction: 'desc',
-  });
-
-  const handleTableChange = (pageObj: any, _filters: any, sorter: any) => {
-    const page = (pageObj?.current ?? 1) - 1;
-    const size = pageObj?.pageSize ?? 10;
-    const sortBy = sorter?.field ?? 'saleTime';
-    const direction = sorter?.order === 'ascend' ? 'asc' : sorter?.order === 'descend' ? 'desc' : 'desc';
-    setSortConfig({ field: sortBy, direction });
-    fetchSales(page, size, sortBy, direction);
-  };
-
   const fetchOrders = async () => {
     try {
       setLoadingOrders(true);
       const response = await ordersAPI.getAll(0, 1000);
-      // Фильтруем только завершенные заказы без продажи
       const completedOrders = (response.content || []).filter(
         (order) => order.status === 'COMPLETED'
       );
       setOrders(completedOrders);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Ошибка при загрузке заказов:', error);
     } finally {
       setLoadingOrders(false);
     }
   };
 
-  const handleEdit = (record: Sale) => {
-    setEditingSale(record);
-    form.setFieldsValue({
-      orderId: record.orderId,
-      total: record.total,
-      paymentMethod: record.paymentMethod,
-      receiptNumber: record.receiptNumber,
-    });
-    setIsModalOpen(true);
+  useEffect(() => {
+    // initial load
+    fetchSales(0, pagination.pageSize, sortConfig.field, sortConfig.direction, currentRangeStart, currentRangeEnd);
+    fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // reload when pagination pageSize, sort or range changes
+    fetchSales(0, pagination.pageSize, sortConfig.field, sortConfig.direction, currentRangeStart, currentRangeEnd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.pageSize, sortConfig.field, sortConfig.direction, currentRangeStart, currentRangeEnd]);
+
+  const handleTableChange = (pageObj: any, _filters: any, sorter: any) => {
+    const page = (pageObj?.current ?? 1) - 1;
+    const size = pageObj?.pageSize ?? 10;
+    const sortBy = sorter?.field ?? 'saleTime';
+    const direction = sorter?.order === 'ascend' ? 'asc' : sorter?.order === 'descend' ? 'desc' : 'desc';
+    setPagination((p) => ({ ...p, current: page + 1, pageSize: size }));
+    setSortConfig({ field: sortBy, direction });
+    fetchSales(page, size, sortBy, direction, currentRangeStart, currentRangeEnd);
   };
 
   const handleDelete = async (id: number) => {
@@ -97,7 +108,7 @@ export default function Sales() {
         try {
           await salesAPI.delete(id);
           message.success('Продажа удалена');
-          fetchSales();
+          fetchSales(pagination.current - 1, pagination.pageSize, sortConfig.field, sortConfig.direction, currentRangeStart, currentRangeEnd);
         } catch (error: any) {
           const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка при удалении продажи';
           message.error(errorMessage);
@@ -106,11 +117,43 @@ export default function Sales() {
     });
   };
 
+  // Range filter for sales: all / today / month / year
+  const applyRange = (selected: typeof range) => {
+    setRange(selected);
+    const now = new Date();
+    let start: Date | undefined;
+    let end: Date | undefined;
+
+    if (selected === 'today') {
+      start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+    } else if (selected === 'month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (selected === 'year') {
+      start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
+
+    if (start && end) {
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
+      setCurrentRangeStart(startIso);
+      setCurrentRangeEnd(endIso);
+      fetchSales(0, pagination.pageSize, sortConfig.field, sortConfig.direction, startIso, endIso);
+    } else {
+      setCurrentRangeStart(undefined);
+      setCurrentRangeEnd(undefined);
+      fetchSales(0, pagination.pageSize, sortConfig.field, sortConfig.direction);
+    }
+  };
+
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
       if (editingSale) {
-        // Обновление продажи - в API может не быть метода update, поэтому просто показываем сообщение
         message.warning('Редактирование продаж пока не поддерживается');
         setIsModalOpen(false);
         form.resetFields();
@@ -125,11 +168,12 @@ export default function Sales() {
         message.success('Продажа создана');
         setIsModalOpen(false);
         form.resetFields();
-        fetchSales();
+        fetchSales(pagination.current - 1, pagination.pageSize, sortConfig.field, sortConfig.direction, currentRangeStart, currentRangeEnd);
       }
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка при сохранении продажи';
       message.error(errorMessage);
+      // eslint-disable-next-line no-console
       console.error('Ошибка при сохранении продажи:', error);
     }
   };
@@ -207,6 +251,15 @@ export default function Sales() {
         </div>
       )}
 
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+        <Select value={range} onChange={(val) => applyRange(val as any)} style={{ width: 220 }}>
+          <Select.Option value="all">Все</Select.Option>
+          <Select.Option value="today">Сегодня</Select.Option>
+          <Select.Option value="month">Текущий месяц</Select.Option>
+          <Select.Option value="year">Текущий год</Select.Option>
+        </Select>
+      </div>
+
       <Spin spinning={loading}>
         <Table<Sale>
           columns={columns}
@@ -216,7 +269,7 @@ export default function Sales() {
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
-            onChange: (page, size) => fetchSales(page - 1, size, sortConfig.field, sortConfig.direction),
+            onChange: (page, size) => fetchSales(page - 1, size, sortConfig.field, sortConfig.direction, currentRangeStart, currentRangeEnd),
           }}
           onChange={handleTableChange}
           bordered
@@ -243,7 +296,7 @@ export default function Sales() {
               disabled={!!editingSale}
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '').toLowerCase().includes(String(input).toLowerCase())
               }
               options={orders.map((order) => ({
                 value: order.id,

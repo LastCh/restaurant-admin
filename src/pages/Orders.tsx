@@ -4,7 +4,8 @@ import { EditOutlined, DeleteOutlined, PlusOutlined, MinusCircleOutlined, PlusCi
 import type { TableColumnsType } from 'antd';
 import { ordersAPI, type Order, type OrderStatus } from '../api/orders';
 import { salesAPI } from '../api/sales';
-import { clientsAPI, type ClientDTO } from '../api/clients';
+import { clientsAPI } from '../api/clients';
+import type { ClientDTO } from '../types/api';
 import { menuAPI, type Dish } from '../api/menu';
 import { useAuthStore } from '../store/authStore';
 import StatusBadge from '../components/common/StatusBadge';
@@ -322,7 +323,7 @@ export default function Orders() {
           bordered
           locale={{ emptyText: 'Здесь пока пусто' }}
           scroll={{ x: 1200 }}
-          onChange={(paginationConfig, filters, sorter) => {
+          onChange={(paginationConfig, _filters, sorter) => {
             if (sorter && 'field' in sorter && sorter.field) {
               const sortBy = sorter.field as string;
               const direction = sorter.order === 'ascend' ? 'asc' : 'desc';
@@ -380,7 +381,7 @@ export default function Orders() {
                   loading={loadingClients}
                   showSearch
                   filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                              String(option?.label ?? '').toLowerCase().includes(String(input).toLowerCase())
                   }
                   options={clients.map((client) => ({
                     value: client.id,

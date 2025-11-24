@@ -2,7 +2,6 @@ import { Layout, Menu, Button, Avatar, Space, Select } from 'antd';
 import { 
   DashboardOutlined, 
   ShoppingCartOutlined, 
-  AppstoreOutlined, 
   CalendarOutlined,
   LogoutOutlined,
   UserOutlined,
@@ -152,7 +151,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <Space>
             <Select value={locale} onChange={(val) => setLocale(val as 'ru' | 'en')} style={{ width: 90 }} options={[{ value: 'ru', label: 'RU' }, { value: 'en', label: 'EN' }]} />
             <Avatar icon={<UserOutlined />} />
-            <span style={{ marginRight: 8 }}>{user?.username}</span>
+            <span style={{ marginRight: 8, color: '#000' }}>{user?.username}</span>
             <Button 
               type="primary" 
               danger 

@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, Spin, message } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, MinusCircleOutlined, PlusCircleOutlined, CheckOutlined } from '@ant-design/icons';
 import type { TableColumnsType } from 'antd';
-import { suppliesAPI, type Supply, type SupplyStatus } from '../api/supplies';
 import { suppliersAPI, type Supplier } from '../api/suppliers';
 import { ingredientsAPI, type Ingredient } from '../api/ingredients';
 import { useAuthStore } from '../store/authStore';
 import { formatPrice } from '../utils/formatters';
 import StatusBadge from '../components/common/StatusBadge';
 import EmptyState from '../components/common/EmptyState';
+import { suppliesAPI, type Supply, type SupplyStatus, type CreateSupplyRequest, type CreateSupplyItemRequest } from '../api/supplies';
 
 export default function Supplies() {
   const [supplies, setSupplies] = useState<Supply[]>([]);
@@ -35,7 +35,6 @@ export default function Supplies() {
       });
     } catch (error) {
       message.error('Ошибка при загрузке поставок');
-      // eslint-disable-next-line no-console
       console.error(error);
     } finally {
       setLoading(false);
@@ -105,7 +104,8 @@ export default function Supplies() {
         try {
           await suppliesAPI.delete(id);
           message.success('Поставка удалена');
-          fetchSupplies();
+          // Обновляем список напрямую, без повторного fetch
+          setSupplies((prev) => prev.filter((s) => s.id !== id));
         } catch (error: any) {
           const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка при удалении поставки';
           message.error(errorMessage);
@@ -113,6 +113,7 @@ export default function Supplies() {
       },
     });
   };
+
 
   const handleConfirm = async (id: number) => {
     try {
@@ -128,39 +129,56 @@ export default function Supplies() {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
+      if (!values.supplierId) {
+        message.error('Выберите поставщика');
+        return;
+      }
+
       if (!values.items || values.items.length === 0) {
         message.error('Добавьте хотя бы одну позицию в поставку');
         return;
       }
 
-      if (editingSupply) {
-        // Обновление поставки
-        await suppliesAPI.update(editingSupply.id, {
-          supplierId: values.supplierId,
-          notes: values.notes,
-        });
-        
-        // Обновляем позиции (удаляем старые и добавляем новые)
-        // В реальном приложении нужно более сложная логика
-        message.success('Поставка обновлена');
-      } else {
-        // Создание новой поставки
-        const supply = await suppliesAPI.create({
-          supplierId: values.supplierId,
-          notes: values.notes,
-        });
+      const supplyRequest: CreateSupplyRequest = {
+        supplierId: values.supplierId,
+        notes: values.notes,
+        items: values.items.map((item: any) => ({
+          ingredientId: item.ingredientId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+      };
 
-        // Добавляем позиции
-        for (const item of values.items) {
-          await suppliesAPI.addItem(supply.id, {
-            ingredientId: item.ingredientId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-          });
-        }
+      if (editingSupply) {
+  // Сначала обновляем саму поставку
+  await suppliesAPI.update(editingSupply.id, {
+    supplierId: values.supplierId,
+    notes: values.notes,
+  });
+
+  // Потом позиции
+  const existingItemIds = editingSupply.items?.map(i => i.id) || [];
+  for (const item of values.items) {
+    if (item.id) {
+        // уже существует — обновляем
+        // здесь API нет updateItem, только remove + add?
+        await suppliesAPI.removeItem(editingSupply.id, item.id);
+      }
+      // добавляем новую или обновлённую
+      await suppliesAPI.addItem(editingSupply.id, {
+        ingredientId: item.ingredientId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      });
+    }
+    message.success('Поставка обновлена');
+  } else {
+        // Создание новой поставки сразу с позициями
+        await suppliesAPI.create(supplyRequest);
         message.success('Поставка создана');
       }
+
       setIsModalOpen(false);
       form.resetFields();
       setEditingSupply(null);
@@ -172,20 +190,10 @@ export default function Supplies() {
     }
   };
 
+
   const columns: TableColumnsType<Supply> = [
-    { 
-      title: 'ID', 
-      dataIndex: 'id', 
-      key: 'id', 
-      width: 80,
-      sorter: true,
-    },
-    { 
-      title: 'Поставщик', 
-      dataIndex: 'supplierName', 
-      key: 'supplierName',
-      sorter: true,
-    },
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 80, sorter: true },
+    { title: 'Поставщик', dataIndex: 'supplierName', key: 'supplierName', sorter: true },
     {
       title: 'Дата поставки',
       dataIndex: 'supplyTime',
@@ -218,12 +226,7 @@ export default function Supplies() {
               Изменить
             </Button>
             {record.status === 'PENDING' && (
-              <Button
-                type="default"
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={() => handleConfirm(record.id)}
-              >
+              <Button type="default" size="small" icon={<CheckOutlined />} onClick={() => handleConfirm(record.id)}>
                 Подтвердить
               </Button>
             )}
@@ -290,13 +293,8 @@ export default function Supplies() {
               placeholder="Выберите поставщика"
               loading={loadingSuppliers}
               showSearch
-              filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-              }
-              options={suppliers.map((supplier) => ({
-                value: supplier.id,
-                label: supplier.name,
-              }))}
+              filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+              options={suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name }))}
             />
           </Form.Item>
 
@@ -317,7 +315,7 @@ export default function Supplies() {
                         loading={loadingIngredients}
                         showSearch
                         filterOption={(input, option) =>
-                          (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                          String(option?.label ?? '').toLowerCase().includes(String(input).toLowerCase())
                         }
                         options={ingredients.map((ingredient) => ({
                           value: ingredient.id,
@@ -344,20 +342,12 @@ export default function Supplies() {
                       <InputNumber min={0.01} step={0.01} placeholder="Цена" prefix="₽" />
                     </Form.Item>
                     {fields.length > 1 && (
-                      <MinusCircleOutlined
-                        onClick={() => remove(name)}
-                        style={{ color: '#ff4d4f', fontSize: 20, marginTop: 8 }}
-                      />
+                      <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f', fontSize: 20, marginTop: 8 }} />
                     )}
                   </Space>
                 ))}
                 <Form.Item>
-                  <Button
-                    type="dashed"
-                    onClick={() => add()}
-                    block
-                    icon={<PlusCircleOutlined />}
-                  >
+                  <Button type="dashed" onClick={() => add()} block icon={<PlusCircleOutlined />}>
                     Добавить позицию
                   </Button>
                 </Form.Item>
